@@ -1,10 +1,10 @@
-export class GetVideoPageAPI {
+ï»¿export class GetVideoPageAPI {
 	static fetch(id) {
 		var url = "https://www.nicovideo.jp/watch/" + id;
 		return fetch(url, { method :"GET" })
 		.catch(error => {
 			console.error(error);
-			return Promise.reject('wŒöŽ®“®‰æƒy[ƒW‚Ì“Ç‚Ýž‚Ýx‚ªƒGƒ‰[‚ð•Ô‚µ‚Ü‚µ‚½B');
+			return Promise.reject('ã€Žå…¬å¼å‹•ç”»ãƒšãƒ¼ã‚¸ã®èª­ã¿è¾¼ã¿ã€ãŒã‚¨ãƒ©ãƒ¼ã‚’è¿”ã—ã¾ã—ãŸã€‚');
 		})
 		.then(res => res.text());
 	}

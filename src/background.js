@@ -1,24 +1,24 @@
-import {SearchAPI} from "./js/search_api.js";
+ï»¿import {SearchAPI} from "./js/search_api.js";
 import {GetVideoPageAPI} from "./js/get_video_page_api.js";
 
 chrome.runtime.onConnect.addListener(port => {
 	if (port.name == "APIChannel") {
 		port.onMessage.addListener(msg => {
 			if (msg.APIName == "SearchAPI") {
-				console.log("SeachAPIƒƒbƒZ[ƒW‚ğó‚¯æ‚è‚Ü‚µ‚½B");
+				console.log("SeachAPIãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å—ã‘å–ã‚Šã¾ã—ãŸã€‚");
 				SearchAPI.fetch(msg.APIObject.word)
 				.then(result => port.postMessage({ "status": true, "result": result }))
-				.catch(e => port.postMessage({ "status":false, "result": "SearchAPI‚ª¸”s‚µ‚Ü‚µ‚½B" }));
+				.catch(e => port.postMessage({ "status":false, "result": "SearchAPIãŒå¤±æ•—ã—ã¾ã—ãŸã€‚" }));
 			}
 			else if (msg.APIName == "GetVideoPageAPI") {
-				console.log("GetVideoPageAPIƒƒbƒZ[ƒW‚ğó‚¯æ‚è‚Ü‚µ‚½B");
+				console.log("GetVideoPageAPIãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å—ã‘å–ã‚Šã¾ã—ãŸã€‚");
 				GetVideoPageAPI.fetch(msg.APIObject.id)
 				.then(result => port.postMessage({ "status": true, "result": result }))
-				.catch(e => port.postMessage({ "status":false, "result": "GetVideoPageAPI‚ª¸”s‚µ‚Ü‚µ‚½B" }));
+				.catch(e => port.postMessage({ "status":false, "result": "GetVideoPageAPIãŒå¤±æ•—ã—ã¾ã—ãŸã€‚" }));
 			}
 			else if (msg.APIName == "CommentServerAPI") {
-				console.log("CommentServerAPIƒƒbƒZ[ƒW‚ğó‚¯æ‚è‚Ü‚µ‚½B");
-				//ƒRƒƒ“ƒgƒT[ƒo[‚Éƒ|ƒXƒg
+				console.log("CommentServerAPIãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å—ã‘å–ã‚Šã¾ã—ãŸã€‚");
+				//ã‚³ãƒ¡ãƒ³ãƒˆã‚µãƒ¼ãƒãƒ¼ã«ãƒã‚¹ãƒˆ
 				var url = msg.APIObject.nvComment.server + "/v1/threads";
 				var json = {
 					"method": "POST",
@@ -36,11 +36,11 @@ chrome.runtime.onConnect.addListener(port => {
 				fetch(url, json)
 				.then(result => result.json())
 				.then(result => port.postMessage({ "status": true, "result": result }))
-				.catch(e => port.postMessage({ "status":false, "result": "CommentServerAPI‚ª¸”s‚µ‚Ü‚µ‚½B" }));
+				.catch(e => port.postMessage({ "status":false, "result": "CommentServerAPIãŒå¤±æ•—ã—ã¾ã—ãŸã€‚" }));
 			}
 			else {
-				console.log("’è‹`‚³‚ê‚Ä‚¢‚È‚¢ƒƒbƒZ[ƒW‚ğó‚¯æ‚è‚Ü‚µ‚½B");
-				port.postMessage({ "status": false, "result": msg.APIName + "‚Í’è‹`‚³‚ê‚Ä‚¢‚È‚¢API–¼‚Å‚·B" });
+				console.log("å®šç¾©ã•ã‚Œã¦ã„ãªã„ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ã‚’å—ã‘å–ã‚Šã¾ã—ãŸã€‚");
+				port.postMessage({ "status": false, "result": msg.APIName + "ã¯å®šç¾©ã•ã‚Œã¦ã„ãªã„APIåã§ã™ã€‚" });
 			}
 		});
 	}

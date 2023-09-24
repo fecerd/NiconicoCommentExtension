@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ニコニコ動画の検索API
  * @see https://site.nicovideo.jp/search-api-docs/snapshot
  */

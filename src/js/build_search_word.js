@@ -1,4 +1,4 @@
-function buildSearchWord(title) {
+﻿function buildSearchWord(title) {
 	var tmp = title
 	.replace('　', ' ') // 全角スペースは半角に直しておく
 	.replace("ニコニコ動画", " ") //タイトルにニコニコ動画が入っている場合があるので消しておく
