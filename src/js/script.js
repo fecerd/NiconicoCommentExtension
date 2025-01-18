@@ -65,24 +65,47 @@ async function SendAPI(name, object) {
 	return result;
 }
 
+var offsetSwitch = false;	//末尾が長い動画シリーズのときはtrueにする
 var lengthSeconds = 0;	//SearchAPIの戻り値retからret.data[0].lengthSecondsで取り出せる公式チャンネル動画の秒数
 var offset = NaN;	//コメントを表示する位置をずらす(ms)
 //コメントのズレを修正するOffsetを更新する
 //video(HTMLVideoElement): 現在のページのvideo要素
-function CalcOffset(video){
+function CalcOffset(video, title){
 	var dCurrentSeconds = video.duration;
+	if (title) {
+		if (title.includes("けいおん！！")) {
+			if (title.includes("第1話")) offset = -10 * 1000;
+			else offset = -19 * 1000;
+			console.log("けいおん！！用オフセット");
+			console.log("現在の動画: " + dCurrentSeconds + "秒\n公式動画: " + lengthSeconds + "秒\nオフセット: " + (offset / 1000.0) + "秒");
+			return;
+		}
+	}
 	if (dCurrentSeconds == NaN || dCurrentSeconds == Infinity){
 		offset = NaN;
 	}
 	else{
 		offset = (dCurrentSeconds - lengthSeconds) * 1000;
 	}
-	console.log("現在の動画: " + dCurrentSeconds + "秒\n公式動画: " + lengthSeconds + "秒");
+	if (offsetSwitch) {
+		offset = 0;
+	}
+	console.log("現在の動画: " + dCurrentSeconds + "秒\n公式動画: " + lengthSeconds + "秒\nオフセット: " + (offset / 1000.0) + "秒");
+}
+
+function SwitchOffsetMode(word) {
+	var result = -1;
+	do {
+		result = word.indexOf("マギアレコード");
+		if (result == -1) break;
+	} while(false);
+	//ここに並べる
+	offsetSwitch = result != -1;
 }
 
 const danimeID = "ch2632720";
-//コメント取得処理
-async function GetComments(comments) {
+
+async function IsOfficial() {
 	//この動画のIDを取得(公式引用確認のため)
 	var splits = location.href.split('/');
 	var currentID = null;
@@ -94,7 +117,7 @@ async function GetComments(comments) {
 	}
 	if (currentID == null) return Promise.reject(new Error("この動画のIDが取得できませんでした。"));
 	//公式引用の確認(スレッドのIDが3種類以上あるとき、引用あり)
-	const result = await SendAPI("GetVideoPageAPI", { "id": currentID })
+	return await SendAPI("GetVideoPageAPI", { "id": currentID })
 	.then(text => new DOMParser().parseFromString(text, "text/html"))
 	.then(doc => ({ "doc": doc, "el": doc.getElementById("js-initial-watch-data") }))
 	.then(obj => ({ "doc": obj.doc, "js": JSON.parse(obj.el.getAttribute("data-api-data")) }))
@@ -113,11 +136,174 @@ async function GetComments(comments) {
 		}
 		return { "doc": obj.doc, "length": ids.length };
 	})
+	.then(obj => {
+		if (obj.length > 2) return Promise.reject(new Error("この動画には既に公式動画からの引用コメントが存在します。"));
+		else return obj;
+	})
 	.catch(e => ({ "doc": null, "length": -1 }));
-	if ((result.doc == null) || (result.length < 0)) return Promise.reject(new Error("この動画の情報が取得できませんでした。"));
-	else if (result.length > 2) return Promise.reject(new Error("この動画には既に公式動画からの引用コメントが存在します。"));
+}
+
+class GetInfoForNiconico {
+	video = null;
+	currentID = null;
+	titleName = null;
+	threadCount = -1;
+	//この動画のIDを取得(公式引用確認のため)
+	_FindCurrentID() {
+		this.currentID = null;
+		var splits = location.href.split('/');
+		for (var i = splits.length; i-- > 0;) {
+			if (splits[i].startsWith("so")) {
+				this.currentID = splits[i];
+				break;
+			}
+		}
+	}
+	//公式引用の確認(スレッドのIDが3種類以上あるとき、引用あり)
+	async _CheckQuote() {
+		this.titleName = null;
+		this.threadCount = -1;
+		const result = await SendAPI("GetVideoPageAPI", { "id": this.currentID })
+		.then(text => new DOMParser().parseFromString(text, "text/html"))
+		.then(doc => ({ "doc": doc, "el": doc.getElementById("js-initial-watch-data") }))
+		.then(obj => ({ "doc": obj.doc, "js": JSON.parse(obj.el.getAttribute("data-api-data")) }))
+		.then(obj => {
+			//dアニメ動画か確認
+			if (obj.js.channel.id != danimeID) {
+				console.log("この動画はdアニメ ニコニコ支店のものではありません。");
+				return Promise.reject(new Error());
+			}
+			else return { "doc": obj.doc, "threads": obj.js.comment.threads };
+		})
+		.then(obj => {
+			var ids = new Array();
+			for (var i = 0; i < obj.threads.length; ++i) {
+				if (!ids.includes(obj.threads[i].id)) ids.push(obj.threads[i].id);
+			}
+			return { "doc": obj.doc, "length": ids.length };
+		})
+		.catch(e => ({ "doc": null, "length": -1 }));
+		if (result.doc == null) {
+			this.threadCount = -1;
+			this.titleName = null;
+		}
+		else {
+			this.threadCount = result.length;
+			this.titleName = result.doc.title;
+		}
+		if (this.threadCount < 0) console.log("この動画の情報が取得できませんでした。");
+		else if (result.length > 2) {
+			console.log("この動画には既に公式動画からの引用コメントが存在します。")
+		}
+	}
+	SetEvent() {
+		this._FindCurrentID();
+	}
+	async AsnycEvent() {
+		this._FindCurrentID();
+		await this._CheckQuote();
+	}
+	GetTitleName() { return this.titleName; }
+	GetVideoTag() { return this.video; }
+}
+
+class GetInfoForAmazon {
+	webplayer = null;
+	video = null;
+	title = null;
+	subtitle = null;
+	titleName = null;
+	loadObserver = null;
+	titleObserver = null;
+	_GetTitle() {
+		if (!this.title || !this.subtitle) {
+			if (this.titleObserver) this.titleObserver.disconnect();
+			this.titleName = null;
+			this.SetEvent();
+			return;
+		}
+		var titleText = this.title.textContent;
+		var subtitleText = this.subtitle.textContent;
+		subtitleText = subtitleText
+			.replace(/シーズン\d?\d*/, ' ')
+			.replace('エピソード', ' ')
+			.replace('「', '')
+			.replace('」', '')
+			.replace('、', '');
+		this.titleName = titleText + subtitleText;
+		if (!this.titleName) {
+			this.titleName = null;
+			return;
+		}
+		console.log("_GetTitle: " + this.titleName);
+	}
+	_Load() {
+		if (!this.webplayer) {
+			this.webplayer = document.getElementById("dv-web-player");
+			if (!this.webplayer) return;
+		}
+		this.video = this.webplayer.getElementsByTagName("video").item(0);
+		if (!this.video) return;
+		this.title = this.webplayer.querySelector('[class*="-title-text"]')
+		this.subtitle = this.webplayer.querySelector('[class*="-subtitle-text"]');
+		if (!this.title || !this.subtitle) return;
+		this.loadObserver.disconnect();
+		this.loadObserver = null;
+	
+		this._GetTitle();
+		this.titleObserver = new MutationObserver(this._GetTitle.bind(this));
+		this.titleObserver.observe(
+			this.subtitle,
+			{
+				childList: true,
+				attributes: true,
+				characterData: true,
+				subtree: true
+			}
+		);
+		console.log("Set _GetTitle Observer.");
+	}
+	SetEvent() {
+		this.webplayer = document.getElementById("dv-web-player");
+		if (!this.webplayer) {
+			console.log("webplayerがありません。");
+			return;
+		}
+		this.loadObserver = new MutationObserver(this._Load.bind(this));
+		this.loadObserver.observe(
+			this.webplayer,
+			{
+				childList: true,
+				subtree: true
+			}
+		);
+	}
+	async AsnycEvent() {
+		var timer = null;
+		timer = setInterval(
+			(name, timer) => {
+				if (name != null) clearInterval(timer);
+			}
+			, 10, this.titleName, timer
+		);
+	}
+	GetTitleName() { return this.titleName; }
+	GetVideoTag() { return this.video; }
+}
+
+var gInfo = null;
+
+//コメント取得処理
+async function GetComments(comments) {
+	//コメント配列を削除
+	comments.splice(0);
+	//非同期処理を同期実行
+	await gInfo.AsnycEvent();
 	//動画タイトルから検索キーワードを生成
-	var word = buildSearchWord(result.doc.title);
+	var word = buildSearchWord(gInfo.GetTitleName());
+
+	//動画タイトルによってオフセットモードを変更
+	SwitchOffsetMode(word);
 	console.log("タイトル: " + word + " に一致する一番コメントの多い動画を検索します。");
 	//コメントを取得
 	const r = await SendAPI("SearchAPI", { "word": word })
@@ -189,12 +375,13 @@ var update = function (startOffset, isUpdate, video) {
 	var endTime = time + 150;	//次のtimeupdateまで時間があるため現時刻よりも多めに流す
 	if (gComments[prev] == null) return;
 	//オフセットを取得
-	if (isNaN(offset)) CalcOffset(video);
+	if (isNaN(offset)) CalcOffset(video, gInfo.titleName);
 	const _offset = Number(isNaN(offset) ? -2000 : offset);
 	for (var i = prev; i < gComments.length; ++i) {
 		var vpos = Number(gComments[i].vposMs);
 		var pos = vpos + _offset;
-		if (pos <= endTime) {
+		if (pos < 0) continue;
+		else if (pos <= endTime) {
 			//spanタグを生成する
 			var el = document.createElement("span");
 			var text = document.createTextNode(gComments[i].data);
@@ -346,7 +533,6 @@ var update = function (startOffset, isUpdate, video) {
 //コメントのアニメーションの再生・停止を決めるスタイル(HTMLStyleElement)
 var animationStyle = null;
 function main() {
-	gComments.splice(0);
 	GetComments(gComments)
 	.then(() => {
 		//レーンの状態を初期化
@@ -498,7 +684,6 @@ function main() {
 
 //RouterLinkによりページが遷移したときに起こるイベント
 function RouterLinkEvent() {
-	gComments.splice(0);
 	state = false;
 	seeking = false;
 	prev = -1000;
@@ -514,7 +699,7 @@ function RouterLinkEvent() {
 	}
 	var video = videos[0];
 	//オフセットをリセット
-	offset = NaN;	
+	offset = NaN;
 	//「続きから再生」されるとき、ページ読み込み後にコメント描画
 	if (video.currentTime != 0) {
 		var comments = document.querySelectorAll(".comment");
@@ -530,18 +715,27 @@ var observer = null;
 
 //ページ読み込み時に作動するイベント
 function loaded() {
-	var titles = document.getElementsByTagName("title");
-	if (titles.length != 0) {
-		var title = titles[0];
-		observer = new MutationObserver(RouterLinkEvent);
-		const config = {
-			attributes: false,
-			childList: true,
-			characterData: true,
-		};
-		observer.observe(title, config);
-		console.log("observer set!");
+	if (location.href.indexOf('nicovideo.') != -1) {
+		var titles = document.getElementsByTagName("title");
+		if (titles.length != 0) {
+			var title = titles[0];
+			observer = new MutationObserver(RouterLinkEvent);
+			const config = {
+				attributes: false,
+				childList: true,
+				characterData: true,
+			};
+			observer.observe(title, config);
+			console.log("observer set!");
+		}
+		gInfo = new GetInfoForNiconico();
+		gInfo.SetEvent();
 	}
+	else if (location.href.indexOf('amazon.') != -1) {
+		gInfo = new GetInfoForAmazon();
+		gInfo.SetEvent();
+	}
+
 	main();
 };
 

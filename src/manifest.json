@@ -8,7 +8,7 @@
 	"description": "Comment Extension For Chrome",
 	"content_scripts": [
 		{
-			"matches": [ "https://www.nicovideo.jp/watch/so*" ],
+			"matches": [ "https://www.nicovideo.jp/watch/so*", "https://www.amazon.co.jp/gp/video/*" ],
 			"js": [ "js/build_search_word.js", "js/script.js" ]
 		}
 	],
