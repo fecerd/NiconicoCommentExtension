@@ -1,15 +1,18 @@
-﻿{
+{
 	"name": "CommentExtension",
 	"version": "1.0.0",
 	"manifest_version": 3,
 	"host_permissions": [
+		"https://snapshot.search.nicovideo.jp/*",
+		"https://www.nicovideo.jp/*",
+		"https://public.nvcomment.nicovideo.jp/*",
 		"https://api.search.nicovideo.jp/*"
 	],
 	"description": "Comment Extension For Chrome",
 	"content_scripts": [
 		{
-			"matches": [ "https://www.nicovideo.jp/watch/so*" ],
-			"js": [ "js/build_search_word.js", "js/script.js" ]
+			"matches": [ "https://www.nicovideo.jp/watch/so*", "https://www.amazon.co.jp/gp/video/*" ],
+			"js": [ "js/api_jsdoc_client.js", "js/script.js" ]
 		}
 	],
 	"background": {
