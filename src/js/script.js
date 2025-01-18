@@ -36,9 +36,6 @@
  * @property {string | object} result statusがtrueのとき、APIのレスポンス(文字列かjsonオブジェクト)。statusがfalseのとき、エラー文字列。
  */
 
-
-//
-
 /**
  * @typedef VideoSize ビデオの描画サイズと上のY座標
  * @property {number} width ビデオの描画幅
@@ -74,6 +71,7 @@ const D_ANIME_ID = "ch2632720";
 /** @type {number} デフォルトのオフセット (ms) */
 const DEFAULT_OFFSET_MS = -2000;
 
+
 ///-----------------------------------------------
 /// グローバル変数定義
 ///-----------------------------------------------
@@ -105,6 +103,8 @@ let g_comments = [];
 /** @type {HTMLVideoElement | null} 現在のページのVideo要素 */
 let g_video = null;
 
+let g_store_video = null;
+
 /** @type {HTMLDivElement | null} Video要素の親となるコメント描画領域用Div要素 */
 let g_screen = null;
 
@@ -131,6 +131,7 @@ let g_initialized = false;
 
 /** @type {number} Video要素が見つかるまで呼び出されるsetInterval関数の戻り値 */
 let g_interval = -1;
+
 
 ///-----------------------------------------------
 /// 関数定義
@@ -361,92 +362,6 @@ function CalcOffset(title) {
 	console.log(Label(`オフセット検索ワード: ${words}`));
 	console.log(Label(`現在の動画: ${g_video.duration}秒\n公式動画: ${g_official_duration_s}秒\nオフセット: ${g_offset_ms / 1e3}秒`));
 }
-
-
-// async function IsOfficial() {
-// 	//この動画のIDを取得(公式引用確認のため)
-// 	var splits = location.href.split('/');
-// 	var currentID = null;
-// 	for (var i = splits.length; i-- > 0;) {
-// 		if (splits[i].startsWith("so")) {
-// 			currentID = splits[i];
-// 			break;
-// 		}
-// 	}
-// 	if (currentID == null) return Promise.reject(new Error("この動画のIDが取得できませんでした。"));
-// 	//公式引用の確認(スレッドのIDが3種類以上あるとき、引用あり)
-// 	return await SendAPI("GetVideoPageAPI", { "id": currentID })
-// 	.then(text => new DOMParser().parseFromString(text, "text/html"))
-// 	.then(doc => ({ "doc": doc, "el": doc.getElementById("js-initial-watch-data") }))
-// 	.then(obj => ({ "doc": obj.doc, "js": JSON.parse(obj.el.getAttribute("data-api-data")) }))
-// 	.then(obj => {
-// 		//dアニメ動画か確認
-// 		if (obj.js.channel.id != D_ANIME_ID) {
-// 			console.log("この動画はdアニメ ニコニコ支店のものではありません。");
-// 			return Promise.reject(new Error());
-// 		}
-// 		else return { "doc": obj.doc, "threads": obj.js.comment.threads };
-// 	})
-// 	.then(obj => {
-// 		var ids = new Array();
-// 		for (var i = 0; i < obj.threads.length; ++i) {
-// 			if (!ids.includes(obj.threads[i].id)) ids.push(obj.threads[i].id);
-// 		}
-// 		return { "doc": obj.doc, "length": ids.length };
-// 	})
-// 	.then(obj => {
-// 		if (obj.length > 2) return Promise.reject(new Error("この動画には既に公式動画からの引用コメントが存在します。"));
-// 		else return obj;
-// 	})
-// 	.catch(e => ({ "doc": null, "length": -1 }));
-// }
-
-// async function GetComments() {
-// 	//コメント配列を削除
-// 	comments.splice(0);
-// 	//非同期処理を同期実行
-// 	await g_page_info.AsnycEvent();
-// 	//動画タイトルから検索キーワードを生成
-// 	var word = buildSearchWord(g_page_info.GetTitleName());
-// 	console.log("タイトル: " + word + " に一致する一番コメントの多い動画を検索します。");
-
-// 	//コメントを取得
-// 	const r = await SendAPI("SearchAPI", { "word": word })
-// 	.then(ret => {
-// 		if (ret.data.length == 0) return Promise.reject(new Error("検索結果が存在しませんでした。"));
-// 		console.log("検索結果は以下の動画です。\nタイトル: " + ret.data[0].title + "\nコメント数: " + ret.data[0].commentCounter);
-// 		g_official_duration_s = ret.data[0].lengthSeconds;
-// 		if (ret.data[0].channelId != undefined) return ret.data[0].contentId; 
-// 		else return Promise.reject(new Error("検索結果がチャンネル動画ではありませんでした。"));
-// 	})
-// 	.then(id => SendAPI("GetVideoPageAPI", { "id": id }))
-// 	.then(text => new DOMParser().parseFromString(text, "text/html"))
-// 	.then(doc => doc.getElementById("js-initial-watch-data"))
-// 	.then(el => JSON.parse(el.getAttribute("data-api-data")))
-// 	.then(js => js.comment.nvComment)
-// 	.then(nvComment => SendAPI("CommentServerAPI", { "nvComment": nvComment }))
-// 	.then(result => {
-// 		var threads = result.data.threads;
-// 		var index = -1;
-// 		for (var i = 0; i < threads.length; ++i) {
-// 			if (threads[i].commentCount != 0 && threads[i].fork == "main") {
-// 				index = i;
-// 				break;
-// 			}
-// 		}
-// 		if (index < 0) return Promise.reject(new Error("検索した動画にはコメントがありません。"));
-// 		var thread = threads[index];
-// 		for (var i = 0; i < thread.comments.length; ++i) {
-// 			comments.push({ "vposMs": Number(thread.comments[i].vposMs), "data": thread.comments[i].body, "commands": thread.comments[i].commands });
-// 		}
-// 		comments.sort((a, b) => Number.isNaN(a.vposMs) || Number.isNaN(b.vposMs) ? (Number.isNaN(a.vposMs) ? (Number.isNaN(b.vposMs) ? 0 : 1) : -1) : a.vposMs - b.vposMs);
-// 		return comments.length + "個のコメントを表示します。";
-// 	})
-// 	.then(result => { return { "status": true, "result": result }; })
-// 	.catch(e => { return { "status": false, "result": "コメント取得に失敗しました。\nメッセージ: " + e.message }; });
-// 	if (r.status) console.log(r.result);
-// 	else return Promise.reject(new Error(r.result));
-// }
 
 function SetVideo() {
 	const video = document.getElementsByTagName("video")[0];
@@ -691,12 +606,21 @@ async function CommonInitialize() {
 		return;
 	}
 
+	const styles = document.querySelectorAll('style.comment-extension');
+	for (const s of styles) s.remove();
+
+	const create_style = () => {
+		const style = document.createElement('style');
+		style.className = style.className ? style.className + " comment-extension" : "comment-extension";
+		return style;
+	};
+
 	// #screenのスタイルを追加
-	const screen_style = document.createElement('style');
+	const screen_style = create_style();
 	document.head.appendChild(screen_style);
 	screen_style.sheet.insertRule("#screen{ background-color: #000; width: 100%; height: 100%; overflow: hidden; white-space: nowrap; cursor:default; -ms-user-select: none; -moz-user-select: none; -webkit-user-select: none; user-select: none; position: relative; }", 0);
 	// #lane[0,NUM_LANE)のスタイルを追加
-	const lane_style = document.createElement('style');
+	const lane_style = create_style();
 	document.head.appendChild(lane_style);
 	// アニメーション用のスタイルを追加
 	for (let i = 0; i < NUM_LANE; ++i) {
@@ -706,7 +630,7 @@ async function CommonInitialize() {
 		lane_style.sheet.insertRule(center_text, i * 2 + 1);
 	}
 	// .commentのスタイルを追加
-	const comment_style = document.createElement('style');
+	const comment_style = create_style();
 	document.head.appendChild(comment_style);
 	for (let i = 0; i < NUM_LANE; ++i) {
 		comment_style.sheet.insertRule(`#center${i}{ left: 50%; }`, i);
@@ -714,11 +638,11 @@ async function CommonInitialize() {
 	comment_style.sheet.insertRule(".comment{ position: absolute; letter-spacing: 1px; padding: 2px 0 2px; white-space: nowrap; z-index: 2; }", 0);
 	comment_style.sheet.insertRule(".comment{ opacity: 0.5; font-weight: 600; line-height: 29px; text-shadow: black 1px 0px, black -1px 0px, black 0px -1px, black 0px 1px, black 1px 1px , black -1px 1px, black 1px -1px, black -1px -1px, black 0px 1px, black -0px 1px, black 0px -1px, black -0px -1px, black 1px 0px, black -1px 0px, black 1px -0px, black -1px -0px; }", 1);
 	// .commentのアニメーションスタイルを追加
-	const animation_style = document.createElement('style');
-	document.head.appendChild(animation_style);
-	animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
+	g_animation_style = create_style();
+	document.head.appendChild(g_animation_style);
+	g_animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
 	// フォントファミリーのスタイルを設定
-	const font_name_style = document.createElement('style');
+	const font_name_style = create_style();
 	document.head.appendChild(font_name_style);
 	const defont = "'Arial', sans-serif";
 	const gothic = '"Hiragino Sans W3", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", "メイリオ", Meiryo, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif';
@@ -730,28 +654,53 @@ async function CommonInitialize() {
 	// ビデオサイズ
 	const video_size = GetVideoSize(g_video);
 	// キーフレームのスタイルを追加
-	const key_frame_style = document.createElement('style');
+	const key_frame_style = create_style();
 	document.head.appendChild(key_frame_style);
 	ChangeKeyFrameInfo(key_frame_style, video_size);
 	// フォントサイズのスタイルを追加
-	const font_size_style = document.createElement('style');
+	const font_size_style = create_style();
 	document.head.appendChild(font_size_style);
 	ChangeFontSizeStyle(font_size_style, video_size.height);
 
 	// コメント用スクリーンの追加
-	const parent = g_video.parentElement;
-	g_screen = document.createElement('div');
-	g_screen.id = 'screen';
-	parent.appendChild(g_screen);
-	g_screen.appendChild(g_video);
+	let parent = g_video.parentElement;
+	if (parent !== document.querySelector("div#screen")) {
+		g_screen = document.createElement('div');
+		g_screen.id = 'screen';
+		parent.appendChild(g_screen);
+		g_screen.appendChild(g_video);			
+	}
+	else {
+		g_screen = parent;
+		parent = g_screen.parentElement;
+	}
+
+	// リサイズ時、コメントサイズとアニメーションの範囲を変更する
+	const observer = new ResizeObserver(
+		() => {
+			const video_size = GetVideoSize(g_video);
+			// キーフレームのスタイルをすべて更新
+			while (key_frame_style.sheet.cssRules.length != 0) {
+				key_frame_style.sheet.deleteRule(key_frame_style.sheet.cssRules.length - 1);
+			}
+			ChangeKeyFrameInfo(key_frame_style, video_size);
+			// フォントサイズ(#medium, #big, #small)のスタイルをすべて更新
+			while (font_size_style.sheet.cssRules.length != 0) {
+				font_size_style.sheet.deleteRule(font_size_style.sheet.cssRules.length - 1);
+			}
+			ChangeFontSizeStyle(font_size_style, video_size.height);
+		}
+	);
+	observer.observe(parent);
+
 	// イベントの追加
 	// 動画が停止したとき、コメントを止める
 	g_video.addEventListener(
 		"pause",
 		() => {
 			g_animation_running_state = false;
-			animation_style.sheet.deleteRule(0);
-			animation_style.sheet.insertRule(".comment{ animation-play-state: paused }", 0);
+			g_animation_style.sheet.deleteRule(0);
+			g_animation_style.sheet.insertRule(".comment{ animation-play-state: paused }", 0);
 		},
 		false
 	);
@@ -760,8 +709,8 @@ async function CommonInitialize() {
 		"play",
 		() => {
 			g_animation_running_state = true;
-			animation_style.sheet.deleteRule(0);
-			animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
+			g_animation_style.sheet.deleteRule(0);
+			g_animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
 		},
 		false
 	);
@@ -770,8 +719,8 @@ async function CommonInitialize() {
 		"ended",
 		() => {
 			g_animation_running_state = false;
-			animation_style.sheet.deleteRule(0);
-			animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
+			g_animation_style.sheet.deleteRule(0);
+			g_animation_style.sheet.insertRule(".comment{ animation-play-state: running }", 0);
 		},
 		false
 	);
@@ -802,8 +751,8 @@ async function CommonInitialize() {
 		() => {
 			if (g_animation_running_state == g_video.paused) {
 				g_animation_running_state = !g_video.paused;
-				animation_style.sheet.deleteRule(0);
-				animation_style.sheet.insertRule(`.comment{ animation-play-state: ${g_animation_running_state ? "running" : "paused"} }`, 0);
+				g_animation_style.sheet.deleteRule(0);
+				g_animation_style.sheet.insertRule(`.comment{ animation-play-state: ${g_animation_running_state ? "running" : "paused"} }`, 0);
 			}
 			AddComments(-2000, true);
 		},
@@ -812,24 +761,6 @@ async function CommonInitialize() {
 
 	// 「続きから再生」対応
 	SettingAtContinueWatching();
-
-	// リサイズ時、コメントサイズとアニメーションの範囲を変更する
-	const observer = new ResizeObserver(
-		() => {
-			const video_size = GetVideoSize(g_video);
-			// キーフレームのスタイルをすべて更新
-			while (key_frame_style.sheet.cssRules.length != 0) {
-				key_frame_style.sheet.deleteRule(key_frame_style.sheet.cssRules.length - 1);
-			}
-			ChangeKeyFrameInfo(key_frame_style, video_size);
-			// フォントサイズ(#medium, #big, #small)のスタイルをすべて更新
-			while (font_size_style.sheet.cssRules.length != 0) {
-				font_size_style.sheet.deleteRule(font_size_style.sheet.cssRules.length - 1);
-			}
-			ChangeFontSizeStyle(font_size_style, video_size.height);
-		}
-	);
-	observer.observe(parent);
 };
 
 /**
@@ -842,20 +773,24 @@ function SetInitialize() {
 	}
 
 	g_interval = setInterval(() => {
-		if (g_initialized) {
-			clearInterval(g_interval);
-			g_interval = -1;
-			return;
-		}
-
 		g_video = null;
 		SetVideo();
 		if (g_video) {
-			// メイン処理
-			CommonInitialize();
-			g_initialized = true;
 			clearInterval(g_interval);
 			g_interval = -1;
+
+			if (g_video !== g_store_video) {
+				g_initialized = false;
+				g_store_video = g_video;
+				g_screen = null;
+				// メイン処理
+				CommonInitialize();
+			}
+			else {
+				// 「続きから再生」対応
+				SettingAtContinueWatching();
+			}
+			g_initialized = true;
 		}
 	}, 100);
 }
@@ -1004,109 +939,12 @@ class GetInfoForNiconico {
 		await this._UpdateInfo();
 		await this._UpdateOfficial();
 
-		// TODO: g_videoの指す要素が変わってしまっているっぽい
-
-		// 引用コメントを描画できるなら初期化処理
+		// 引用コメントを描画できるかつ未初期化なら初期化処理
 		if (!this.m_quoted && this.m_is_d_anime && g_comments.length !== 0) {
 			SetInitialize();
 		}
-
-		// 引用コメントを描画できるかつ未初期化なら初期化処理
-		if (!this.m_quoted && this.m_is_d_anime && g_comments.length !== 0) {
-			if (!g_initialized) {
-				SetInitialize();
-			}
-			else {
-				// 「続きから再生」対応
-				SettingAtContinueWatching();
-			}
-		}
 	}
 }
-
-// class GetInfoForAmazon {
-// 	webplayer = null;
-// 	video = null;
-// 	title = null;
-// 	subtitle = null;
-// 	titleName = null;
-// 	loadObserver = null;
-// 	titleObserver = null;
-// 	_GetTitle() {
-// 		if (!this.title || !this.subtitle) {
-// 			if (this.titleObserver) this.titleObserver.disconnect();
-// 			this.titleName = null;
-// 			this.SetEvent();
-// 			return;
-// 		}
-// 		var titleText = this.title.textContent;
-// 		var subtitleText = this.subtitle.textContent;
-// 		subtitleText = subtitleText
-// 			.replace(/シーズン\d?\d*/, ' ')
-// 			.replace('エピソード', ' ')
-// 			.replace('「', '')
-// 			.replace('」', '')
-// 			.replace('、', '');
-// 		this.titleName = titleText + subtitleText;
-// 		if (!this.titleName) {
-// 			this.titleName = null;
-// 			return;
-// 		}
-// 		console.log("_GetTitle: " + this.titleName);
-// 	}
-// 	_Load() {
-// 		if (!this.webplayer) {
-// 			this.webplayer = document.getElementById("dv-web-player");
-// 			if (!this.webplayer) return;
-// 		}
-// 		this.video = this.webplayer.getElementsByTagName("video").item(0);
-// 		if (!this.video) return;
-// 		this.title = this.webplayer.querySelector('[class*="-title-text"]')
-// 		this.subtitle = this.webplayer.querySelector('[class*="-subtitle-text"]');
-// 		if (!this.title || !this.subtitle) return;
-// 		this.loadObserver.disconnect();
-// 		this.loadObserver = null;
-	
-// 		this._GetTitle();
-// 		this.titleObserver = new MutationObserver(this._GetTitle.bind(this));
-// 		this.titleObserver.observe(
-// 			this.subtitle,
-// 			{
-// 				childList: true,
-// 				attributes: true,
-// 				characterData: true,
-// 				subtree: true
-// 			}
-// 		);
-// 		console.log("Set _GetTitle Observer.");
-// 	}
-// 	SetEvent() {
-// 		this.webplayer = document.getElementById("dv-web-player");
-// 		if (!this.webplayer) {
-// 			console.log("webplayerがありません。");
-// 			return;
-// 		}
-// 		this.loadObserver = new MutationObserver(this._Load.bind(this));
-// 		this.loadObserver.observe(
-// 			this.webplayer,
-// 			{
-// 				childList: true,
-// 				subtree: true
-// 			}
-// 		);
-// 	}
-// 	async AsnycEvent() {
-// 		var timer = null;
-// 		timer = setInterval(
-// 			(name, timer) => {
-// 				if (name != null) clearInterval(timer);
-// 			}
-// 			, 10, this.titleName, timer
-// 		);
-// 	}
-// 	GetTitleName() { return this.titleName; }
-// 	GetVideoTag() { return this.video; }
-// }
 
 /** ページ読み込み時に作動するイベント */
 async function OnPageLoaded() {
