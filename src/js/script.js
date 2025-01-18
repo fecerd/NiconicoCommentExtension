@@ -2,9 +2,6 @@
 /// 型定義
 ///-----------------------------------------------
 
-// import * as t from './api_jsdoc_client.js'
-
-
 /**
  * @typedef VideoDetails 動画情報
  * @property {string} id 動画ID
